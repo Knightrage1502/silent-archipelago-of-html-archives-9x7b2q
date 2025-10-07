@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Steam Clone</title>
+  <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Steam_icon_logo.svg/1024px-Steam_icon_logo.svg.png">
+  <style>
+    :root {
+      --steam-dark-blue: #1b2838;
+      --steam-dark-gray: #171a21;
+      --steam-gray: #414349;
+      --steam-light-gray: #66c0f4;
+      --steam-text-color: #c7d5e0;
+      --steam-button-bg: #526d83;
+      --steam-button-hover: #6a809b;
+      --steam-font-family: "Motiva Sans", "Arial", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--steam-font-family);
+      background-color: var(--steam-dark-blue);
+      color: var(--steam-text-color);
+      user-select: none;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      transition: background-image 0.5s ease-in-out;
+    }
+
+    #ui-container {
+      display: flex;
+      height: 100%;
+      width: 100%;
+      transition: transform 0.3s ease-in-out;
+    }
+
+    #sidebar {
+      width: 250px;
+      background-color: var(--steam-dark-gray);
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      box-sizing: border-box;
+      border-right: 2px solid #000;
+    }
+
+    #game-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      overflow-y: auto;
+      flex-grow: 1;
+    }
+
+    .game-item {
+      padding: 15px;
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out;
+      font-size: 1.1em;
+      border-radius: 5px;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      position: relative;
+    }
+    .game-item:hover:not(.edit-mode-active) {
+      background-color: var(--steam-gray);
+    }
+
+    .game-item.active {
+      background-color: var(--steam-gray);
+    }
+
+    .game-icon {
+      width: 30px;
+      height: 30px;
+      margin-right: 10px;
+      border-radius: 3px;
+    }
+
+    #game-view {
+      flex-grow: 1;
+      padding: 20px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    #game-content {
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+      display: none;
+      flex-direction: column;
+    }
+
+    #game-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: none;
+    }
+
+    .game-title {
+      font-size: 3em;
+      margin-bottom: 20px;
+      color: var(--steam-text-color);
+    }
+
+    .play-button {
+      padding: 15px 40px;
+      font-size: 1.5em;
+      cursor: pointer;
+      border: none;
+      background-color: var(--steam-button-bg);
+      color: var(--steam-text-color);
+      border-radius: 5px;
+      transition: background-color 0.2s ease-in-out;
+    }
+
+    .play-button:hover {
+      background-color: var(--steam-button-hover);
+    }
+
+    .game-details {
+      text-align: left;
+      display: none;
+      flex-direction: column;
+      padding: 20px;
+    }
+    .game-details-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .game-details-icon-wrapper {
+      position: relative;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: opacity 0.2s ease-in-out;
+    }
+
+    .game-details-icon-wrapper:hover .change-image-button {
+      opacity: 1;
+    }
+
+    .change-image-button {
+      position: absolute;
+      bottom: 5px;
+      right: 5px;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s ease-in-out;
+    }
+
+    .game-details-icon {
+      width: 60px;
+      height: 60px;
+      margin-right: 20px;
+      border-radius: 5px;
+    }
+
+    .game-details-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .game-details-title {
+      font-size: 2.5em;
+      font-weight: bold;
+      margin: 0;
+    }
+
+    .game-details-desc {
+      font-size: 1.2em;
+      color: var(--steam-light-gray);
+    }
+
+    .home-view {
+      text-align: center;
+      padding-top: 50px;
+    }
+
+    #controls {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px 20px;
+      border-radius: 5px;
+      z-index: 1000;
+      display: none;
+    }
+    #action-buttons {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 10px;
+      z-index: 1001;
+    }
+
+    #edit-mode-toggle, #bg-button, #back-button {
+      background: var(--steam-button-bg);
+      color: var(--steam-text-color);
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out;
+    }
+
+    #edit-mode-toggle:hover, #bg-button:hover, #back-button:hover {
+      background-color: var(--steam-button-hover);
+    }
+
+    .edit-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      z-index: 10;
+    }
+
+    .edit-mode-active .edit-overlay {
+      display: flex;
+    }
+
+    /* Smaller edit mode buttons */
+    .edit-button, .delete-button, .select-image-button {
+      font-size: 0.7em;
+      padding: 4px 8px;
+      margin: 3px;
+      border: none;
+      cursor: pointer;
+      border-radius: 3px;
+      font-weight: bold;
+      transition: background-color 0.2s ease-in-out;
+    }
+
+    .edit-button { background-color: #66c0f4; color: var(--steam-dark-blue); }
+    .delete-button { background-color: #d9534f; color: white; }
+    .select-image-button { background-color: #5cb85c; color: white; }
+
+    .edit-button:hover { background-color: #81c8f7; }
+    .delete-button:hover { background-color: #c9302c; }
+    .select-image-button:hover { background-color: #449d44; }
+
+    .hidden-input { display: none; }
+    #import-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .importer-button {
+      padding: 10px 15px;
+      background-color: var(--steam-button-bg);
+      color: var(--steam-text-color);
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out;
+    }
+
+    .importer-button:hover { background-color: var(--steam-button-hover); }
+
+    #app-audio-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--steam-text-color);
+      font-size: 2em;
+      height: 100%;
+    }
+
+    #audio-player {
+      width: 80%;
+      max-width: 600px;
+      margin-top: 20px;
+      background: var(--steam-dark-gray);
+      border: none;
+    }
+
+    #game-view h1, #game-view p {
+      text-align: center;
+    }
+  </style>
+</head>
+<body id="body">
+
+  <div id="ui-container">
+    <div id="sidebar">
+      <h2>Your Library</h2>
+      <ul id="game-list"></ul>
+      <div id="import-buttons" style="display: none;">
+        <button class="importer-button" onclick="document.getElementById('file-input-html').click()">Import HTML</button>
+        <button class="importer-button" onclick="document.getElementById('file-input-audio').click()">Import Audio</button>
+        <button class="importer-button" onclick="importUrl()">Import URL</button>
+      </div>
+    </div>
+
+    <div id="game-view">
+      <div id="home-view" class="home-view">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Steam_icon_logo.svg/1024px-Steam_icon_logo.svg.png" width="100px" alt="Steam Logo">
+        <h1 style="margin-top: 20px;">Welcome to Fake Steam</h1>
+        <p>Select a game from your library to begin.</p>
+      </div>
+      <div id="game-details" class="game-details">
+        <div class="game-details-header">
+          <div id="game-details-icon-wrapper" class="game-details-icon-wrapper">
+            <img id="game-details-icon" class="game-details-icon" alt="Game Icon">
+            <button class="change-image-button" title="Change game image">Change Image</button>
+          </div>
+          <div class="game-details-text">
+            <span id="game-details-title" class="game-details-title"></span>
+            <p id="game-details-desc" class="game-details-desc"></p>
+          </div>
+        </div>
+        <button id="play-button" class="play-button">Play</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="controls">Press "Escape" to exit</div>
+
+  <div id="action-buttons">
+    <button id="bg-button" title="Set custom background">Custom Background</button>
+    <button id="edit-mode-toggle">Enter Edit Mode</button>
+    <button id="back-button" style="display: none;">Back</button>
+  </div>
+
+  <div id="game-content">
+    <iframe id="game-iframe"></iframe>
+    <div id="app-audio-wrapper">
+      <audio id="audio-player" controls></audio>
+      <div id="audio-info"></div>
+    </div>
+  </div>
+
+  <!-- Hidden file inputs -->
+  <input type="file" id="file-input-html" class="hidden-input" accept=".html,.htm" multiple>
+  <input type="file" id="file-input-audio" class="hidden-input" accept="audio/*" multiple>
+  <input type="file" id="image-input" class="hidden-input" accept="image/*">
+  <input type="file" id="bg-image-input" class="hidden-input" accept="image/*">
+  <script>
+    const body = document.getElementById('body');
+    const uiContainer = document.getElementById('ui-container');
+    const gameList = document.getElementById('game-list');
+    const gameView = document.getElementById('game-view');
+    const gameContent = document.getElementById('game-content');
+    const gameIframe = document.getElementById('game-iframe');
+    const audioPlayer = document.getElementById('audio-player');
+    const appAudioWrapper = document.getElementById('app-audio-wrapper');
+    const playButton = document.getElementById('play-button');
+    const gameDetails = document.getElementById('game-details');
+    const gameDetailsTitle = document.getElementById('game-details-title');
+    const gameDetailsDesc = document.getElementById('game-details-desc');
+    const gameDetailsIcon = document.getElementById('game-details-icon');
+    const homeView = document.getElementById('home-view');
+    const controls = document.getElementById('controls');
+    const fileInputHtml = document.getElementById('file-input-html');
+    const fileInputAudio = document.getElementById('file-input-audio');
+    const imageInput = document.getElementById('image-input');
+    const bgImageInput = document.getElementById('bg-image-input');
+    const editModeToggle = document.getElementById('edit-mode-toggle');
+    const bgButton = document.getElementById('bg-button');
+    const backButton = document.getElementById('back-button');
+    const actionButtons = document.getElementById('action-buttons');
+    const importButtons = document.getElementById('import-buttons');
+    const gameDetailsIconWrapper = document.getElementById('game-details-icon-wrapper');
+
+    let tiles = JSON.parse(localStorage.getItem('tiles')) || [];
+    let isEditMode = false;
+    let activeGame = null;
+
+    function renderGameList() {
+      gameList.innerHTML = '';
+      if (!isEditMode) {
+        const importTiles = [
+          { name: '+ HTML', click: () => fileInputHtml.click(), type: 'importer', color: 'var(--steam-dark-gray)' },
+          { name: '+ Audio', click: () => fileInputAudio.click(), type: 'importer', color: 'var(--steam-dark-gray)' },
+          { name: '+ URL', click: importUrl, type: 'importer', color: '#ff9800' }
+        ];
+        importTiles.forEach(tileData => {
+          const li = document.createElement('li');
+          li.className = 'game-item';
+          li.innerHTML = `<span class="game-icon" style="background-color: ${tileData.color};">+</span> <span>${tileData.name}</span>`;
+          li.onclick = tileData.click;
+          gameList.appendChild(li);
+        });
+      }
+      tiles.forEach((tile, index) => {
+        const li = document.createElement('li');
+        li.className = 'game-item';
+        const icon = document.createElement('img');
+        icon.className = 'game-icon';
+        icon.src = tile.imageDataUrl || 'https://via.placeholder.com/30/171a21/c7d5e0?text=?';
+        icon.alt = tile.name || "Game icon";
+        const name = document.createElement('span');
+        name.textContent = tile.name;
+        li.appendChild(icon);
+        li.appendChild(name);
+
+        if (isEditMode) {
+          li.classList.add('edit-mode-active');
+          const editOverlay = document.createElement('div');
+          editOverlay.className = 'edit-overlay';
+          editOverlay.innerHTML = `
+            <button class="edit-button">Edit</button>
+            <button class="select-image-button">Image</button>
+            <button class="delete-button">Delete</button>
+          `;
+          li.appendChild(editOverlay);
+
+          editOverlay.querySelector('.edit-button').onclick = (e) => {
+            e.stopPropagation();
+            editTile(index);
+          };
+          editOverlay.querySelector('.select-image-button').onclick = (e) => {
+            e.stopPropagation();
+            imageInput.onchange = (event) => {
+              const file = event.target.files[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = (readerEvent) => {
+                tile.imageDataUrl = readerEvent.target.result;
+                saveTiles();
+                renderGameList();
+              };
+              reader.readAsDataURL(file);
+            };
+            imageInput.click();
+          };
+          editOverlay.querySelector('.delete-button').onclick = (e) => {
+            e.stopPropagation();
+            if (confirm(`Do you want to delete the tile for "${tile.name}"?`)) {
+              tiles.splice(index, 1);
+              saveTiles();
+              renderGameList();
+            }
+          };
+        }
+
+        li.onclick = (e) => {
+          if (!isEditMode) {
+            selectGame(tile, index, li);
+          }
+        };
+        gameList.appendChild(li);
+      });
+    }
+
+    function selectGame(tile, index, element) {
+      document.querySelectorAll('.game-item').forEach(item => item.classList.remove('active'));
+      element.classList.add('active');
+      homeView.style.display = 'none';
+      gameDetails.style.display = 'flex';
+      gameDetailsIcon.src = tile.imageDataUrl || 'https://via.placeholder.com/60/171a21/c7d5e0?text=?';
+      gameDetailsTitle.textContent = tile.name;
+      gameDetailsDesc.textContent = tile.type;
+      activeGame = tile;
+    }
+
+    function editTile(index) {
+      const tile = tiles[index];
+      const newName = prompt("Enter a new name for the tile:", tile.name);
+      if (newName !== null) {
+        tile.name = newName;
+        saveTiles();
+        renderGameList();
+      }
+    }
+
+    function saveTiles() {
+      localStorage.setItem('tiles', JSON.stringify(tiles));
+    }
+    playButton.onclick = () => {
+      if (activeGame) {
+        uiContainer.style.display = 'none';
+        gameContent.style.display = 'flex';
+        controls.style.display = 'block';
+        actionButtons.style.display = 'none';
+        backButton.style.display = 'block';
+
+        if (activeGame.type === 'url') {
+          gameIframe.style.display = 'block';
+          appAudioWrapper.style.display = 'none';
+          gameIframe.src = activeGame.url;
+        } else if (activeGame.type === 'html') {
+          gameIframe.style.display = 'block';
+          appAudioWrapper.style.display = 'none';
+          gameIframe.src = activeGame.dataUrl;
+        } else if (activeGame.type === 'audio') {
+          gameIframe.style.display = 'none';
+          appAudioWrapper.style.display = 'flex';
+          audioPlayer.src = activeGame.dataUrl;
+          audioPlayer.play();
+          document.getElementById('audio-info').textContent = `Now Playing: ${activeGame.name}`;
+        }
+
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(err => {
+            console.warn("Fullscreen not available:", err);
+          });
+        }
+      }
+    };
+
+    function exitGameView() {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      }
+      uiContainer.style.display = 'flex';
+      gameContent.style.display = 'none';
+      controls.style.display = 'none';
+      actionButtons.style.display = 'flex';
+      backButton.style.display = 'none';
+      gameIframe.src = 'about:blank';
+      audioPlayer.pause();
+      audioPlayer.src = '';
+      homeView.style.display = 'block';
+      gameDetails.style.display = 'none';
+      renderGameList();
+    }
+
+    backButton.onclick = exitGameView;
+
+    gameDetailsIconWrapper.addEventListener('click', () => {
+      imageInput.onchange = (event) => {
+        const file = event.target.files[0];
+        if (!file || !activeGame) return;
+        const reader = new FileReader();
+        reader.onload = (readerEvent) => {
+          activeGame.imageDataUrl = readerEvent.target.result;
+          saveTiles();
+          selectGame(activeGame, -1, document.querySelector('.game-item.active'));
+          renderGameList();
+        };
+        reader.readAsDataURL(file);
+      };
+      imageInput.click();
+    });
+
+    function handleFileInput(e, type) {
+      const files = e.target.files;
+      if (files.length === 0) return;
+
+      Array.from(files).forEach(file => {
+        if (type === 'audio') {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const tile = {
+              name: file.name,
+              dataUrl: event.target.result,   // Base64 string
+              type: 'audio',
+              imageDataUrl: 'https://via.placeholder.com/30/171a21/c7d5e0?text=AUD'
+            };
+            tiles.push(tile);
+            saveTiles();
+            renderGameList();
+          };
+          reader.readAsDataURL(file);
+        } else {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const tile = {
+              name: file.name,
+              dataUrl: event.target.result,
+              type: type,
+              imageDataUrl: `https://via.placeholder.com/30/171a21/c7d5e0?text=${type.toUpperCase().substring(0, 3)}`
+            };
+            tiles.push(tile);
+            saveTiles();
+            renderGameList();
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+
+    function importUrl() {
+      const url = prompt("Enter the URL of the website you want to add:");
+      if (url) {
+        const tileName = prompt("Enter a name for the URL tile:", url);
+        if (tileName !== null) {
+          const tile = {
+            name: tileName,
+            url: url,
+            type: 'url',
+            imageDataUrl: 'https://via.placeholder.com/30/171a21/c7d5e0?text=URL'
+          };
+          tiles.push(tile);
+          saveTiles();
+          renderGameList();
+        }
+      }
+    }
+
+    bgButton.addEventListener('click', () => {
+      bgImageInput.onchange = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (readerEvent) => {
+          const imageUrl = readerEvent.target.result;
+          localStorage.setItem('customBackground', imageUrl);
+          body.style.backgroundImage = `url(${imageUrl})`;
+        };
+        reader.readAsDataURL(file);
+      };
+      bgImageInput.click();
+    });
+
+    editModeToggle.addEventListener('click', () => {
+      isEditMode = !isEditMode;
+      editModeToggle.textContent = isEditMode ? 'Exit Edit Mode' : 'Enter Edit Mode';
+      importButtons.style.display = isEditMode ? 'flex' : 'none';
+      renderGameList();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        exitGameView();
+      }
+    });
+
+    function loadBackground() {
+      const storedBackground = localStorage.getItem('customBackground');
+      if (storedBackground) {
+        body.style.backgroundImage = `url(${storedBackground})`;
+      }
+    }
+
+    fileInputHtml.addEventListener('change', (e) => handleFileInput(e, 'html'));
+    fileInputAudio.addEventListener('change', (e) => handleFileInput(e, 'audio'));
+
+    loadBackground();
+    renderGameList();
+  </script>
+</body>
+</html>
