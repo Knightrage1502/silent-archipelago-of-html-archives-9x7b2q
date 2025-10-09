@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Home</title>
+  <link rel="icon" href="https://ssl.gstatic.com/classroom/favicon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Segoe UI, sans-serif;
+            background-color: #1c1c1c;
+            color: #fff;
+            user-select: none;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+            transition: background-image 0.5s ease-in-out;
+        }
+
+        #start-screen {
+            flex-grow: 1;
+            display: grid;
+            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            grid-auto-rows: 150px;
+            transition: transform 0.3s ease-in-out;
+            align-content: start;
+        }
+
+        .tile {
+            background-color: #0078d7;
+            padding: 10px;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+            overflow: hidden;
+            transition: transform 0.1s ease-in-out;
+            box-sizing: border-box;
+            background-size: cover;
+            background-position: center;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+        }
+
+        .tile:hover:not(.edit-mode-active) {
+            transform: scale(1.05);
+        }
+        
+        .tile-content {
+            z-index: 1;
+            text-align: center;
+            padding: 5px;
+            background: rgba(0, 0, 0, 0.4);
+            width: 100%;
+            display: block;
+            word-break: break-word;
+        }
+
+        .add-tile-btn {
+            background-color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3em;
+            color: #aaa;
+            border: 2px dashed #555;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+        
+        #app-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            display: none;
+            flex-direction: column;
+            z-index: 999;
+        }
+
+        #app-iframe, #app-audio-wrapper {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        #app-audio-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2em;
+        }
+
+        #audio-player {
+            width: 80%;
+            max-width: 600px;
+            margin-top: 20px;
+        }
+
+        .hidden-input {
+            display: none;
+        }
+
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 5px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        #action-buttons {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 10px;
+            z-index: 1001;
+        }
+
+        #edit-mode-toggle, #bg-button {
+            background: #444;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .edit-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 10;
+        }
+        
+        .edit-mode-active .edit-overlay {
+            display: flex;
+        }
+        
+        .edit-button, .delete-button, .select-image-button {
+            padding: 8px 15px;
+            margin: 5px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .edit-button {
+            background-color: #0078d7;
+            color: white;
+        }
+        
+        .delete-button {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        .select-image-button {
+            background-color: #2ecc71;
+            color: white;
+        }
+    </style>
+</head>
+<body id="body">
+
+    <div id="start-screen">
+        <!-- Import buttons are dynamically rendered based on edit mode -->
+    </div>
+
+    <div id="action-buttons">
+        <button id="bg-button">Custom Background</button>
+        <button id="edit-mode-toggle">Enter Edit Mode</button>
+    </div>
+
+    <div id="app-container">
+        <iframe id="app-iframe"></iframe>
+        <div id="app-audio-wrapper">
+            <audio id="audio-player" controls></audio>
+            <div id="audio-info"></div>
+        </div>
+    </div>
+
+    <div id="controls">Press "@" to exit</div>
+
+    <!-- Hidden file inputs -->
+    <input type="file" id="file-input-html" class="hidden-input" accept=".html,.htm" multiple>
+    <input type="file" id="file-input-audio" class="hidden-input" accept="audio/*" multiple>
+    <input type="file" id="image-input" class="hidden-input" accept="image/*">
+    <input type="file" id="bg-image-input" class="hidden-input" accept="image/*">
+
+    <script>
+        const body = document.getElementById('body');
+        const startScreen = document.getElementById('start-screen');
+        const appContainer = document.getElementById('app-container');
+        const appIframe = document.getElementById('app-iframe');
+        const audioPlayer = document.getElementById('audio-player');
+        const appAudioWrapper = document.getElementById('app-audio-wrapper');
+        const controls = document.getElementById('controls');
+        const fileInputHtml = document.getElementById('file-input-html');
+        const fileInputAudio = document.getElementById('file-input-audio');
+        const imageInput = document.getElementById('image-input');
+        const bgImageInput = document.getElementById('bg-image-input');
+        const editModeToggle = document.getElementById('edit-mode-toggle');
+        const bgButton = document.getElementById('bg-button');
+        const actionButtons = document.getElementById('action-buttons');
+
+        let tiles = JSON.parse(localStorage.getItem('tiles')) || [];
+        let isEditMode = false;
+
+        function renderTiles() {
+            startScreen.innerHTML = '';
+            
+            if (!isEditMode) {
+                const importTiles = [
+                    { name: '+ HTML', click: () => fileInputHtml.click(), type: 'importer', color: '#333' },
+                    { name: '+ Audio', click: () => fileInputAudio.click(), type: 'importer', color: '#333' },
+                    { name: '+ URL', click: importUrl, type: 'importer', color: '#ff9800' }
+                ];
+
+                importTiles.forEach(tileData => {
+                    const tileEl = document.createElement('div');
+                    tileEl.className = 'tile add-tile-btn';
+                    tileEl.textContent = tileData.name;
+                    tileEl.style.backgroundColor = tileData.color;
+                    tileEl.onclick = tileData.click;
+                    startScreen.appendChild(tileEl);
+                });
+            }
+
+            tiles.forEach((tile, index) => {
+                const tileEl = document.createElement('div');
+                tileEl.className = 'tile';
+                tileEl.style.backgroundColor = tile.color || '#0078d7';
+
+                if (tile.imageDataUrl) {
+                    tileEl.style.backgroundImage = `url(${tile.imageDataUrl})`;
+                }
+
+                const tileContent = document.createElement('div');
+                tileContent.className = 'tile-content';
+                tileContent.textContent = tile.name;
+                tileEl.appendChild(tileContent);
+
+                const editOverlay = document.createElement('div');
+                editOverlay.className = 'edit-overlay';
+                editOverlay.innerHTML = `
+                    <button class="edit-button">Edit</button>
+                    <button class="select-image-button">Image</button>
+                    <button class="delete-button">Delete</button>
+                `;
+                tileEl.appendChild(editOverlay);
+
+                if (isEditMode) {
+                    tileEl.classList.add('edit-mode-active');
+                } else {
+                    tileEl.classList.remove('edit-mode-active');
+                }
+
+                editOverlay.querySelector('.edit-button').onclick = (e) => {
+                    e.stopPropagation();
+                    editTile(index);
+                };
+                editOverlay.querySelector('.select-image-button').onclick = (e) => {
+                    e.stopPropagation();
+                    imageInput.onclick = null;
+                    imageInput.onchange = (event) => {
+                        const file = event.target.files[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (readerEvent) => {
+                            tile.imageDataUrl = readerEvent.target.result;
+                            saveTiles();
+                            renderTiles();
+                        };
+                        reader.readAsDataURL(file);
+                    };
+                    imageInput.click();
+                };
+                editOverlay.querySelector('.delete-button').onclick = (e) => {
+                    e.stopPropagation();
+                    if (confirm(`Do you want to delete the tile for "${tile.name}"?`)) {
+                        tiles.splice(index, 1);
+                        saveTiles();
+                        renderTiles();
+                    }
+                };
+
+                tileEl.onclick = (e) => {
+                    if (!isEditMode) {
+                        launchApp(tile);
+                    }
+                };
+
+                startScreen.appendChild(tileEl);
+            });
+        }
+        
+        function editTile(index) {
+            const tile = tiles[index];
+            const newName = prompt("Enter a new name for the tile:", tile.name);
+            const newColor = prompt("Enter a new background color (e.g., #ff0000 or red):", tile.color);
+            
+            if (newName !== null) {
+                tile.name = newName;
+            }
+            if (newColor !== null) {
+                tile.color = newColor;
+            }
+            
+            saveTiles();
+            renderTiles();
+        }
+
+        function saveTiles() {
+            localStorage.setItem('tiles', JSON.stringify(tiles));
+        }
+
+        function launchApp(tile) {
+            appContainer.style.display = 'flex';
+            controls.style.display = 'block';
+            actionButtons.style.display = 'none';
+            
+            appIframe.style.display = 'none';
+            appAudioWrapper.style.display = 'none';
+
+            if (tile.type === 'url') {
+                appIframe.style.display = 'block';
+                appIframe.src = tile.url;
+            } else if (tile.type === 'html') {
+                appIframe.style.display = 'block';
+                appIframe.src = tile.dataUrl;
+            } else if (tile.type === 'audio') {
+                appAudioWrapper.style.display = 'flex';
+                audioPlayer.src = tile.dataUrl;
+                audioPlayer.play();
+                document.getElementById('audio-info').textContent = `Now Playing: ${tile.name}`;
+            }
+
+            document.documentElement.requestFullscreen();
+        }
+
+        function handleFileInput(e, type) {
+            const files = e.target.files;
+            if (files.length === 0) return;
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+
+                reader.onload = (event) => {
+                    const tile = {
+                        name: file.name,
+                        dataUrl: event.target.result,
+                        type: type,
+                        color: getRandomColor()
+                    };
+                    tiles.push(tile);
+                    saveTiles();
+                    renderTiles();
+                };
+
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function importUrl() {
+            const url = prompt("Enter the URL of the website you want to add:");
+            if (url) {
+                const tileName = prompt("Enter a name for the URL tile:", url);
+                const tileColor = prompt("Enter a background color (e.g., #0078d7 or blue):", getRandomColor());
+                if (tileName !== null && tileColor !== null) {
+                    const tile = {
+                        name: tileName,
+                        url: url,
+                        type: 'url',
+                        color: tileColor
+                    };
+                    tiles.push(tile);
+                    saveTiles();
+                    renderTiles();
+                }
+            }
+        }
+
+        bgButton.addEventListener('click', () => {
+            bgImageInput.click();
+        });
+
+        bgImageInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (readerEvent) => {
+                const imageUrl = readerEvent.target.result;
+                localStorage.setItem('customBackground', imageUrl);
+                body.style.backgroundImage = `url(${imageUrl})`;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        editModeToggle.addEventListener('click', () => {
+            isEditMode = !isEditMode;
+            editModeToggle.textContent = isEditMode ? 'Exit Edit Mode' : 'Enter Edit Mode';
+            renderTiles();
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === '@') {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                }
+                appContainer.style.display = 'none';
+                controls.style.display = 'none';
+                actionButtons.style.display = 'flex';
+                audioPlayer.pause();
+                audioPlayer.src = '';
+                appIframe.src = 'about:blank';
+                renderTiles();
+            }
+        });
+
+        function getRandomColor() {
+            const colors = ['#0078d7', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+        
+        function loadBackground() {
+            const storedBackground = localStorage.getItem('customBackground');
+            if (storedBackground) {
+                body.style.backgroundImage = `url(${storedBackground})`;
+            }
+        }
+        
+        fileInputHtml.addEventListener('change', (e) => handleFileInput(e, 'html'));
+        fileInputAudio.addEventListener('change', (e) => handleFileInput(e, 'audio'));
+        
+        loadBackground();
+        renderTiles();
+    </script>
+
+</body>
+</html>
