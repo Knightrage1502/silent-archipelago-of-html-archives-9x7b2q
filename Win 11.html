@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Home</title>
+  <link rel="icon" href="https://ssl.gstatic.com/classroom/favicon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            overflow: hidden;
+            height: 100%;
+            background: url('https://img.wallpapers.net/wallpapers/windows-11-2023-wallpaper-ai-generated-digital-art-4k-wallpaper-4v6b66e3s3g3l0i0.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+
+        /* Desktop */
+        #desktop {
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 48px);
+        }
+
+        /* Taskbar */
+        #taskbar {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 48px;
+            background: rgba(30, 30, 30, 0.85);
+            backdrop-filter: blur(20px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .taskbar-icon {
+            width: 36px;
+            height: 36px;
+            margin: 0 8px;
+            padding: 4px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .taskbar-icon:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Windows */
+        .window {
+            position: absolute;
+            background: rgba(40, 40, 40, 0.95);
+            backdrop-filter: blur(25px);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            display: none;
+            flex-direction: column;
+            resize: both;
+            overflow: hidden;
+            min-width: 300px;
+            min-height: 200px;
+            color: white;
+            z-index: 100; /* Ensure windows are above desktop */
+        }
+        
+        .window-header {
+            cursor: grab;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .window-title {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .window-buttons {
+            display: flex;
+        }
+
+        .window-button {
+            width: 30px;
+            height: 24px;
+            text-align: center;
+            line-height: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .window-button.minimize:hover { background: rgba(255, 255, 255, 0.1); }
+        .window-button.close:hover { background: #e81123; }
+
+        .window-content {
+            flex-grow: 1;
+            padding: 12px;
+            overflow: auto;
+        }
+
+        /* Specific App Styles */
+        #web-browser-content {
+            display: flex;
+            flex-direction: column;
+        }
+        #browser-nav {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        #browser-url {
+            flex-grow: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            padding: 8px;
+            color: white;
+            border-radius: 4px;
+        }
+        #browser-url:focus { outline: none; }
+        .browser-btn {
+            padding: 8px 12px;
+            background: #0078d4;
+            border: none;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #browser-frame {
+            width: 100%;
+            flex-grow: 1;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: white;
+            border-radius: 4px;
+        }
+
+        #html-runner-content {
+            display: flex;
+            flex-direction: column;
+        }
+        #html-runner-textarea {
+            flex-grow: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            height: 150px;
+        }
+        #html-runner-buttons {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .html-runner-btn {
+            padding: 8px 12px;
+            background: #0078d4;
+            border: none;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #html-runner-preview {
+            margin-top: 10px;
+            flex-grow: 1;
+            background: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        #html-runner-preview iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        #music-player-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #music-player-file-input {
+            display: none; /* Hide the file input */
+        }
+        #music-player-audio {
+            width: 100%;
+            margin-top: 20px;
+            display: none;
+        }
+        #music-player-controls {
+            margin-top: 10px;
+        }
+        .music-player-btn {
+            padding: 8px 12px;
+            background: #0078d4;
+            border: none;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #now-playing {
+            margin-top: 10px;
+        }
+
+        #customize-content button {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="desktop">
+        <!-- Web Browser Window -->
+        <div id="web-browser-window" class="window" style="left: 10%; top: 10%; width: 600px; height: 400px;">
+            <div class="window-header">
+                <span class="window-title">Browser</span>
+                <div class="window-buttons">
+                    <span class="window-button minimize" onclick="minimizeWindow('web-browser-window')">—</span>
+                    <span class="window-button close" onclick="closeWindow('web-browser-window')">×</span>
+                </div>
+            </div>
+            <div class="window-content" id="web-browser-content">
+                <div id="browser-nav">
+                    <input type="text" id="browser-url" value="https://www.google.com">
+                    <button id="browser-go" class="browser-btn">Go</button>
+                    <button id="browser-fullscreen-btn" class="browser-btn">Fullscreen</button>
+                </div>
+                <iframe id="browser-frame" src="https://www.google.com" frameborder="0" allowfullscreen></iframe>
+            </div>
+        </div>
+
+        <!-- HTML Runner Window -->
+        <div id="html-runner-window" class="window" style="left: 20%; top: 20%; width: 600px; height: 500px;">
+            <div class="window-header">
+                <span class="window-title">HTML Runner</span>
+                <div class="window-buttons">
+                    <span class="window-button minimize" onclick="minimizeWindow('html-runner-window')">—</span>
+                    <span class="window-button close" onclick="closeWindow('html-runner-window')">×</span>
+                </div>
+            </div>
+            <div class="window-content" id="html-runner-content">
+                <textarea id="html-runner-textarea"><h1>Hello, World!</h1><p>Type or import your HTML here.</p></textarea>
+                <div id="html-runner-buttons">
+                    <button class="html-runner-btn" id="html-runner-run">Run HTML</button>
+                    <button class="html-runner-btn" id="html-runner-import-btn">Import File</button>
+                    <button class="html-runner-btn" id="html-runner-fullscreen-btn">Fullscreen</button>
+                    <input type="file" id="html-runner-file-input" accept=".html" style="display: none;">
+                </div>
+                <div id="html-runner-preview">
+                    <!-- iframe will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Music Player Window -->
+        <div id="music-player-window" class="window" style="left: 30%; top: 30%; width: 400px; height: 300px;">
+            <div class="window-header">
+                <span class="window-title">Music Player</span>
+                <div class="window-buttons">
+                    <span class="window-button minimize" onclick="minimizeWindow('music-player-window')">—</span>
+                    <span class="window-button close" onclick="closeWindow('music-player-window')">×</span>
+                </div>
+            </div>
+            <div class="window-content" id="music-player-content">
+                <div id="music-player-controls">
+                    <button class="music-player-btn" id="music-player-import-btn">Import Music File</button>
+                    <input type="file" id="music-player-file-input" accept="audio/*" style="display: none;">
+                </div>
+                <audio id="music-player-audio" controls style="width: 100%;"></audio>
+                <div id="now-playing" style="margin-top: 10px;"></div>
+            </div>
+        </div>
+
+        <!-- Customization Window -->
+        <div id="customize-window" class="window" style="left: 40%; top: 40%; width: 450px; height: 250px;">
+            <div class="window-header">
+                <span class="window-title">Customize Desktop</span>
+                <div class="window-buttons">
+                    <span class="window-button minimize" onclick="minimizeWindow('customize-window')">—</span>
+                    <span class="window-button close" onclick="closeWindow('customize-window')">×</span>
+                </div>
+            </div>
+            <div class="window-content" id="customize-content">
+                <p>Change the desktop background by importing an image file.</p>
+                <button class="html-runner-btn" id="customize-import-btn">Import Background Image</button>
+                <input type="file" id="customize-file-input" accept="image/*" style="display: none;">
+                <button class="html-runner-btn" id="customize-reset-btn">Reset to Default</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="taskbar">
+        <img src="https://img.icons8.com/color/48/000000/google-chrome.png" alt="Browser" class="taskbar-icon" onclick="openWindow('web-browser-window')">
+        <img src="https://img.icons8.com/color/48/000000/html-5.png" alt="HTML Runner" class="taskbar-icon" onclick="openWindow('html-runner-window')">
+        <img src="https://img.icons8.com/color/48/000000/music.png" alt="Music Player" class="taskbar-icon" onclick="openWindow('music-player-window')">
+        <img src="https://img.icons8.com/color/48/000000/settings--v1.png" alt="Customize" class="taskbar-icon" onclick="openWindow('customize-window')">
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            let activeWindow = null;
+            let isDragging = false;
+            let offsetX, offsetY;
+
+            const windows = document.querySelectorAll('.window');
+            windows.forEach(win => {
+                const header = win.querySelector('.window-header');
+                header.addEventListener('mousedown', (e) => {
+                    activeWindow = win;
+                    bringToFront(activeWindow);
+                    isDragging = true;
+                    offsetX = e.clientX - win.offsetLeft;
+                    offsetY = e.clientY - win.offsetTop;
+                    win.style.cursor = 'grabbing';
+                });
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging || !activeWindow) return;
+                activeWindow.style.left = `${e.clientX - offsetX}px`;
+                activeWindow.style.top = `${e.clientY - offsetY}px`;
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging && activeWindow) {
+                    activeWindow.style.cursor = 'default';
+                }
+                isDragging = false;
+                activeWindow = null;
+            });
+
+            function bringToFront(windowElement) {
+                let maxZ = 100;
+                windows.forEach(w => {
+                    const zIndex = parseInt(w.style.zIndex || 100);
+                    if (zIndex > maxZ) {
+                        maxZ = zIndex;
+                    }
+                });
+                windowElement.style.zIndex = maxZ + 1;
+            }
+
+            window.openWindow = function(windowId) {
+                const win = document.getElementById(windowId);
+                win.style.display = 'flex';
+                bringToFront(win);
+            };
+
+            window.minimizeWindow = function(windowId) {
+                const win = document.getElementById(windowId);
+                win.style.display = 'none';
+            };
+
+            window.closeWindow = function(windowId) {
+                const win = document.getElementById(windowId);
+                win.style.display = 'none';
+
+                // Handle app-specific resource cleanup
+                switch (windowId) {
+                    case 'web-browser-window':
+                        const browserFrame = document.getElementById('browser-frame');
+                        browserFrame.src = 'about:blank';
+                        break;
+                    case 'html-runner-window':
+                        const previewContainer = document.getElementById('html-runner-preview');
+                        previewContainer.innerHTML = '';
+                        // Also, revoke any existing blob URL if it exists
+                        if (currentBlobUrl) {
+                            URL.revokeObjectURL(currentBlobUrl);
+                            currentBlobUrl = null;
+                        }
+                        break;
+                    case 'music-player-window':
+                        const audioPlayer = document.getElementById('music-player-audio');
+                        audioPlayer.pause();
+                        audioPlayer.src = '';
+                        document.getElementById('now-playing').textContent = '';
+                        break;
+                }
+            };
+
+            // Web Browser App
+            document.getElementById('browser-go').addEventListener('click', () => {
+                const urlInput = document.getElementById('browser-url');
+                let url = urlInput.value;
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    url = 'https://' + url;
+                }
+                document.getElementById('browser-frame').src = url;
+            });
+
+            document.getElementById('browser-fullscreen-btn').addEventListener('click', () => {
+                const browserFrame = document.getElementById('browser-frame');
+                if (browserFrame.requestFullscreen) {
+                    browserFrame.requestFullscreen();
+                } else if (browserFrame.webkitRequestFullscreen) { /* Safari */
+                    browserFrame.webkitRequestFullscreen();
+                } else if (browserFrame.msRequestFullscreen) { /* IE11 */
+                    browserFrame.msRequestFullscreen();
+                }
+            });
+
+            // HTML Runner App
+            let currentBlobUrl = null;
+            function renderHtmlInIframe(htmlCode) {
+                const previewContainer = document.getElementById('html-runner-preview');
+                previewContainer.innerHTML = '';
+                const iframe = document.createElement('iframe');
+                const blob = new Blob([htmlCode], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                iframe.src = url;
+                previewContainer.appendChild(iframe);
+                if (currentBlobUrl) {
+                    URL.revokeObjectURL(currentBlobUrl);
+                }
+                currentBlobUrl = url;
+            }
+            document.getElementById('html-runner-run').addEventListener('click', () => {
+                const htmlCode = document.getElementById('html-runner-textarea').value;
+                renderHtmlInIframe(htmlCode);
+            });
+            document.getElementById('html-runner-import-btn').addEventListener('click', () => {
+                document.getElementById('html-runner-file-input').click();
+            });
+            document.getElementById('html-runner-file-input').addEventListener('change', (e) => {
+                const file = e.target.files;
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const htmlCode = event.target.result;
+                        document.getElementById('html-runner-textarea').value = htmlCode;
+                        renderHtmlInIframe(htmlCode);
+                    };
+                    reader.readAsText(file);
+                }
+            });
+            document.getElementById('html-runner-fullscreen-btn').addEventListener('click', () => {
+                const previewContainer = document.getElementById('html-runner-preview');
+                if (previewContainer.requestFullscreen) {
+                    previewContainer.requestFullscreen();
+                } else if (previewContainer.webkitRequestFullscreen) { /* Safari */
+                    previewContainer.webkitRequestFullscreen();
+                } else if (previewContainer.msRequestFullscreen) { /* IE11 */
+                    previewContainer.msRequestFullscreen();
+                }
+            });
+
+            // Music Player App
+            const audioPlayer = document.getElementById('music-player-audio');
+            const nowPlaying = document.getElementById('now-playing');
+            document.getElementById('music-player-import-btn').addEventListener('click', () => {
+                document.getElementById('music-player-file-input').click();
+            });
+            document.getElementById('music-player-file-input').addEventListener('change', (e) => {
+                const file = e.target.files;
+                if (file) {
+                    const fileURL = URL.createObjectURL(file);
+                    audioPlayer.src = fileURL;
+                    audioPlayer.style.display = 'block';
+                    audioPlayer.play();
+                    nowPlaying.textContent = `Now playing: ${file.name}`;
+                }
+            });
+
+            // Customization App
+            document.getElementById('customize-import-btn').addEventListener('click', () => {
+                document.getElementById('customize-file-input').click();
+            });
+            document.getElementById('customize-file-input').addEventListener('change', (e) => {
+                const file = e.target.files;
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const bgUrl = event.target.result;
+                        document.body.style.backgroundImage = `url('${bgUrl}')`;
+                        localStorage.setItem('customBackground', bgUrl);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            document.getElementById('customize-reset-btn').addEventListener('click', () => {
+                document.body.style.backgroundImage = `url('https://img.wallpapers.net/wallpapers/windows-11-2023-wallpaper-ai-generated-digital-art-4k-wallpaper-4v6b66e3s3g3l0i0.jpg')`;
+                localStorage.removeItem('customBackground');
+            });
+
+            // Load custom background from localStorage on startup
+            const savedBackground = localStorage.getItem('customBackground');
+            if (savedBackground) {
+                document.body.style.backgroundImage = `url('${savedBackground}')`;
+            }
+        });
+    </script>
+</body>
+</html>
+
