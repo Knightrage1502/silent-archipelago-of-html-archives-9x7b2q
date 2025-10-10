@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Home</title>
+  <link rel="icon" href="https://ssl.gstatic.com/classroom/favicon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            overflow: hidden;
+            height: 100%;
+            background: url('https://img.wallpapers.net/wallpapers/windows-11-2023-wallpaper-ai-generated-digital-art-4k-wallpaper-4v6b66e3s3g3l0i0.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+
+        #desktop {
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 48px);
+            user-select: none;
+        }
+
+        #taskbar {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 48px;
+            background: rgba(30, 30, 30, 0.85);
+            backdrop-filter: blur(20px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .taskbar-icon {
+            width: 36px;
+            height: 36px;
+            margin: 0 8px;
+            padding: 4px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .taskbar-icon:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .window {
+            position: absolute;
+            background: rgba(40, 40, 40, 0.95);
+            backdrop-filter: blur(25px);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            display: none;
+            flex-direction: column;
+            resize: both;
+            overflow: hidden;
+            min-width: 300px;
+            min-height: 200px;
+            color: white;
+            z-index: 100;
+        }
+        
+        .window-header {
+            cursor: grab;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .window-title {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .window-buttons {
+            display: flex;
+        }
+
+        .window-button {
+            width: 30px;
+            height: 24px;
+            text-align: center;
+            line-height: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .window-button.minimize:hover { background: rgba(255, 255, 255, 0.1); }
+        .window-button.close:hover { background: #e81123; }
+
+        .window-content {
+            flex-grow: 1;
+            padding: 12px;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #start-button {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 6px;
+            width: 36px;
+            height: 36px;
+            background: #0078d4;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            padding: 4px;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #start-button:hover {
+            background: rgba(0, 120, 212, 0.8);
+        }
+        
+        #start-menu {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            max-height: 500px;
+            background: rgba(30, 30, 30, 0.95);
+            backdrop-filter: blur(25px);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            z-index: 200;
+        }
+        
+        .start-menu-app {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 80px;
+            height: 80px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .start-menu-app:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+        
+        .start-menu-app img {
+            width: 48px;
+            height: 48px;
+        }
+        
+        .start-menu-app span {
+            font-size: 12px;
+            margin-top: 5px;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+
+        .desktop-shortcut {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+            text-align: center;
+            cursor: pointer;
+            width: 80px;
+            user-select: none;
+        }
+        
+        .desktop-shortcut img {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 5px;
+        }
+        
+        .desktop-shortcut span {
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Specific App Styles */
+        #web-browser-content { flex-direction: column; }
+        #browser-nav { display: flex; gap: 5px; margin-bottom: 10px; }
+        #browser-url { flex-grow: 1; background: rgba(255, 255, 255, 0.1); border: none; padding: 8px; color: white; border-radius: 4px; }
+        #browser-url:focus { outline: none; }
+        .browser-btn, .html-runner-btn, .music-player-btn, .notes-btn { padding: 8px 12px; background: #0078d4; border: none; color: white; border-radius: 4px; cursor: pointer; }
+        #browser-frame { width: 100%; flex-grow: 1; border: 1px solid rgba(255, 255, 255, 0.1); background: white; border-radius: 4px; }
+        #html-runner-content { flex-direction: column; }
+        #html-runner-textarea { flex-grow: 1; background: rgba(255, 255, 255, 0.1); border: none; color: white; padding: 12px; border-radius: 4px; font-family: monospace; height: 150px; }
+        #html-runner-buttons { margin-top: 10px; display: flex; justify-content: space-between; }
+        #html-runner-preview { margin-top: 10px; flex-grow: 1; background: white; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; }
+        #html-runner-preview iframe { width: 100%; height: 100%; border: none; }
+        #music-player-content { align-items: center; }
+        #music-player-file-input { display: none; }
+        #music-player-audio { width: 100%; margin-top: 20px; display: none; }
+        #music-player-controls { margin-top: 10px; }
+        #now-playing { margin-top: 10px; }
+        #customize-content button { margin-top: 10px; }
+        #notes-textarea { flex-grow: 1; background: rgba(255, 255, 255, 0.1); border: none; padding: 12px; color: white; border-radius: 4px; font-family: 'Segoe UI', Arial, sans-serif; }
+  </style>
+</head>
+<body>
+    <div id="desktop">
+        <!-- Web Browser Window -->
+        <div id="web-browser-window" class="window" style="left: 10%; top: 10%; width: 600px; height: 400px;">
+            <div class="window-header">
+                <span class="window-title">Browser</span>
+                <div class="window-buttons">
+                    <span class="window-button minimize" onclick="minimizeWindow('web-browser-window')">—</span>
+                    <span class="window-button close" onclick="closeWindow('web-browser-window')">×</span>
+                </div>
+            </div>
+            <div class="window-content" id="web-browser-content">
+                <div id="browser-nav">
+                    <input type="text" id="browser-url" value="https://www.google.com">
+                    <button id="browser-go" class="browser-btn">Go</button>
+                    <button id="browser-fullscreen-btn" class="browser-btn">Fullscreen</button>
+                </div>
+                <iframe id="browser-frame" src="https://www.google.com" frameborder="0" allowfullscreen></iframe>
+            </div>
+        </div>
+
+        <!-- HTML Runner Window -->
+        <div id="html-runner-window" class="window" style="left: 20%; top: 20%; width: 600px; height: 500px;">
+            <div class="window-header">
+                <span class="window-title">HTML Runner</span>
+                <div class="window-buttons">
+                    <span class="window-button minimize" onclick="minimizeWindow('html-runner-window')">—</span>
+                    <span class="window-button close" onclick="closeWindow('html-runner-window')">×</span>
+                </div>
+            </div>
+            <div class="window-content" id="html-runner-content">
+                <textarea id="html-runner-textarea"><h1>Hello, World!</h1><p>Type or import your HTML here.</p></textarea>
+                <div id="html-runner-buttons">
+                    <button class="html-runner-btn" id="html-runner-run">Run HTML</button>
+                    <button class="html-runner-btn" id="html-runner-import-btn">Import File</button>
+                    <button class="html-runner-btn" id="html-runner-fullscreen-btn">Fullscreen</button>
+                    <input type="file" id="html-runner-file-input" accept=".html" style="display: none;">
+                </div>
+                <div id="html-runner-preview"></div>
+            </div>
+        </div>
+        <!-- Music Player Window -->
+        <div id="music-player-window" class="window" style="left: 30%; top: 30%; width: 400px; height: 300px;">
+            <div class="window-header">
+                <span class="window-title">Music Player</span>
+                <div class="window-buttons">
+                    <span class="window-button minimize" onclick="minimizeWindow('music-player-window')">—</span>
+                    <span class="window-button close" onclick="closeWindow('music-player-window')">×</span>
+                </div>
+            </div>
+            <div class="window-content" id="music-player-content">
+                <div id="music-player-controls">
+                    <button class="music-player-btn" id="music-player-import-btn">Import Music File</button>
+                    <input type="file" id="music-player-file-input" accept="audio/*" style="display: none;">
+                </div>
+                <audio id="music-player-audio" controls style="width: 100%;"></audio>
+                <div id="now-playing" style="margin-top: 10px;"></div>
+            </div>
+        </div>
+
+        <!-- Customization Window -->
+        <div id="customize-window" class="window" style="left: 40%; top: 40%; width: 450px; height: 250px;">
+            <div class="window-header">
+                <span class="window-title">Customize Desktop</span>
+                <div class="window-buttons">
+                    <span class="window-button minimize" onclick="minimizeWindow('customize-window')">—</span>
+                    <span class="window-button close" onclick="closeWindow('customize-window')">×</span>
+                </div>
+            </div>
+            <div class="window-content" id="customize-content">
+                <p>Change the desktop background by importing an image file.</p>
+                <button class="html-runner-btn" id="customize-import-btn">Import Background Image</button>
+                <input type="file" id="customize-file-input" accept="image/*" style="display: none;">
+                <button class="html-runner-btn" id="customize-reset-btn">Reset to Default</button>
+            </div>
+        </div>
+
+        <!-- Notes App Window -->
+        <div id="notes-window" class="window" style="left: 50%; top: 50%; width: 500px; height: 350px;">
+            <div class="window-header">
+                <span class="window-title">Notes</span>
+                <div class="window-buttons">
+                    <span class="window-button minimize" onclick="minimizeWindow('notes-window')">—</span>
+                    <span class="window-button close" onclick="closeWindow('notes-window')">×</span>
+                </div>
+            </div>
+            <div class="window-content" id="notes-content">
+                <textarea id="notes-textarea" placeholder="Start typing..."></textarea>
+                <div id="notes-buttons" style="margin-top: 10px; display: flex; justify-content: space-between;">
+                    <button class="notes-btn" id="notes-import-btn">Import Text File</button>
+                    <button class="notes-btn" id="notes-save-btn">Save Note</button>
+                    <input type="file" id="notes-file-input" accept=".txt" style="display: none;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="taskbar">
+        <div id="start-button">
+            <img src="https://img.icons8.com/color/48/000000/windows-11.png" alt="Start" width="28" height="28">
+        </div>
+    </div>
+
+    <div id="start-menu" class="hidden">
+        <div class="start-menu-app" onclick="openWindow('web-browser-window')" draggable="true" data-app-id="web-browser-window">
+            <img src="https://img.icons8.com/color/48/000000/google-chrome.png" alt="Browser">
+            <span>Browser</span>
+        </div>
+        <div class="start-menu-app" onclick="openWindow('html-runner-window')" draggable="true" data-app-id="html-runner-window">
+            <img src="https://img.icons8.com/color/48/000000/html-5.png" alt="HTML Runner">
+            <span>HTML Runner</span>
+        </div>
+        <div class="start-menu-app" onclick="openWindow('music-player-window')" draggable="true" data-app-id="music-player-window">
+            <img src="https://img.icons8.com/color/48/000000/music.png" alt="Music Player">
+            <span>Music Player</span>
+        </div>
+        <div class="start-menu-app" onclick="openWindow('customize-window')" draggable="true" data-app-id="customize-window">
+            <img src="https://img.icons8.com/color/48/000000/settings--v1.png" alt="Settings">
+            <span>Settings</span>
+        </div>
+        <div class="start-menu-app" onclick="openWindow('notes-window')" draggable="true" data-app-id="notes-window">
+            <img src="https://img.icons8.com/ios-filled/50/FFFFFF/note.png" alt="Notes">
+            <span>Notes</span>
+        </div>
+    </div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Load saved background on startup (moved to top for persistence)
+        const savedBackground = localStorage.getItem('customBackground');
+        if (savedBackground) {
+            document.body.style.backgroundImage = `url('${savedBackground}')`;
+        }
+
+        let activeWindow = null;
+        let isDragging = false;
+        let offsetX, offsetY;
+        let currentBlobUrl = null;
+
+        const desktop = document.getElementById('desktop');
+        const windows = document.querySelectorAll('.window');
+
+        // --- General Window Management ---
+        windows.forEach(win => {
+            const header = win.querySelector('.window-header');
+            header.addEventListener('mousedown', (e) => {
+                activeWindow = win;
+                bringToFront(activeWindow);
+                isDragging = true;
+                offsetX = e.clientX - win.offsetLeft;
+                offsetY = e.clientY - win.offsetTop;
+                win.style.cursor = 'grabbing';
+            });
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging || !activeWindow) return;
+            activeWindow.style.left = `${e.clientX - offsetX}px`;
+            activeWindow.style.top = `${e.clientY - offsetY}px`;
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging && activeWindow) {
+                activeWindow.style.cursor = 'default';
+            }
+            isDragging = false;
+            activeWindow = null;
+        });
+
+        function bringToFront(windowElement) {
+            let maxZ = 100;
+            windows.forEach(w => {
+                const zIndex = parseInt(w.style.zIndex || 100);
+                if (zIndex > maxZ) {
+                    maxZ = zIndex;
+                }
+            });
+            windowElement.style.zIndex = maxZ + 1;
+        }
+
+        window.openWindow = function(windowId) {
+            const win = document.getElementById(windowId);
+            win.style.display = 'flex';
+            bringToFront(win);
+        };
+
+        window.minimizeWindow = function(windowId) {
+            const win = document.getElementById(windowId);
+            win.style.display = 'none';
+        };
+
+        window.closeWindow = function(windowId) {
+            const win = document.getElementById(windowId);
+            win.style.display = 'none';
+            switch (windowId) {
+                case 'web-browser-window':
+                    const browserFrame = document.getElementById('browser-frame');
+                    browserFrame.src = 'about:blank';
+                    break;
+                case 'html-runner-window':
+                    const previewContainer = document.getElementById('html-runner-preview');
+                    previewContainer.innerHTML = '';
+                    if (currentBlobUrl) {
+                        URL.revokeObjectURL(currentBlobUrl);
+                        currentBlobUrl = null;
+                    }
+                    break;
+                case 'music-player-window':
+                    const audioPlayer = document.getElementById('music-player-audio');
+                    audioPlayer.pause();
+                    audioPlayer.src = '';
+                    document.getElementById('now-playing').textContent = '';
+                    break;
+                case 'notes-window':
+                    // Clean up notes if needed
+                    break;
+            }
+        };
+
+        // --- Drag-and-Drop and Shortcut Creation ---
+        let shortcutCounter = 0; // To ensure unique positions for new shortcuts
+
+        function createDesktopShortcut(fileName, fileType, iconUrl, x = null, y = null, fileData = null) {
+            const shortcut = document.createElement('div');
+            shortcut.className = 'desktop-shortcut';
+
+            // Generate unique position if not provided
+            if (x === null || y === null) {
+                x = 20 + (shortcutCounter * 100);
+                y = 20;
+                shortcutCounter++;
+            }
+            shortcut.style.left = `${x}px`;
+            shortcut.style.top = `${y}px`;
+
+            shortcut.setAttribute('data-file-type', fileType);
+            shortcut.setAttribute('data-file-name', fileName);
+            shortcut.ondblclick = openShortcut;
+
+            const icon = document.createElement('img');
+            icon.src = iconUrl;
+            icon.alt = fileName;
+            shortcut.appendChild(icon);
+
+            const label = document.createElement('span');
+            label.textContent = fileName.length > 10 ? fileName.substring(0, 10) + '...' : fileName;
+            shortcut.appendChild(label);
+
+            desktop.appendChild(shortcut);
+
+            const fileKey = `file:${fileName}`;
+            const shortcutKey = `shortcut:${fileName}`;
+
+            // Save shortcut metadata and file data (if necessary) to localStorage
+            localStorage.setItem(shortcutKey, JSON.stringify({ fileName, fileType, icon: iconUrl, x, y }));
+            if (fileData) {
+                localStorage.setItem(fileKey, fileData);
+            }
+        }
+
+        desktop.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+
+        desktop.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                const reader = new FileReader();
+                const fileName = file.name;
+                const fileType = file.type.split('/')[0];
+                const fileExtension = fileName.split('.').pop().toLowerCase();
+
+                reader.onload = (event) => {
+                    const fileData = event.target.result;
+                    if (fileType === 'audio') {
+                        createDesktopShortcut(fileName, 'audio', 'https://img.icons8.com/color/48/000000/music.png', e.clientX, e.clientY, fileData);
+                    } else if (fileType === 'text' && fileExtension === 'html') {
+                        createDesktopShortcut(fileName, 'html', 'https://img.icons8.com/color/48/000000/html-5.png', e.clientX, e.clientY, fileData);
+                    } else if (fileType === 'image') {
+                        createDesktopShortcut(fileName, 'image', fileData, e.clientX, e.clientY);
+                    } else if (fileType === 'text') {
+                        createDesktopShortcut(fileName, 'text', 'https://img.icons8.com/color/48/000000/txt.png', e.clientX, e.clientY, fileData);
+                    }
+                };
+
+                if (fileType === 'image' || fileType === 'audio' || fileType === 'text') {
+                    reader.readAsDataURL(file);
+                } else {
+                    alert('Unsupported file type. Only HTML, audio, text, and image files are supported.');
+                }
+            }
+        });
+
+        function openShortcut(event) {
+            const fileType = event.currentTarget.getAttribute('data-file-type');
+            const fileName = event.currentTarget.getAttribute('data-file-name');
+            const fileData = localStorage.getItem(`file:${fileName}`);
+
+            if (fileType === 'image' || fileType === 'audio' || fileType === 'text' || fileType === 'html') {
+                const appWindowId = {
+                    'html': 'html-runner-window',
+                    'audio': 'music-player-window',
+                    'text': 'notes-window'
+                }[fileType];
+
+                if (fileData) {
+                    openWindow(appWindowId);
+                    switch (fileType) {
+                        case 'html':
+                            renderHtmlInIframe(fileData);
+                            break;
+                        case 'audio':
+                            const audioPlayer = document.getElementById('music-player-audio');
+                            const nowPlaying = document.getElementById('now-playing');
+                            audioPlayer.src = fileData;
+                            audioPlayer.play();
+                            audioPlayer.style.display = 'block';
+                            nowPlaying.textContent = `Now playing: ${fileName}`;
+                            break;
+                        case 'text':
+                            const notesTextarea = document.getElementById('notes-textarea');
+                            notesTextarea.value = atob(fileData.split(',')[1]); // Decode Base64
+                            break;
+                    }
+                } else if (fileType === 'image') {
+                    alert(`Image file "${fileName}" was loaded. You can now use it for the desktop background.`);
+                }
+            }
+        }
+
+        function loadShortcuts() {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('shortcut:')) {
+                    const shortcutData = JSON.parse(localStorage.getItem(key));
+                    const fileDataKey = `file:${shortcutData.fileName}`;
+                    if (localStorage.getItem(fileDataKey) || shortcutData.fileType === 'image') {
+                        createDesktopShortcut(shortcutData.fileName, shortcutData.fileType, shortcutData.icon, shortcutData.x, shortcutData.y);
+                    } else {
+                        localStorage.removeItem(key);
+                    }
+                }
+            }
+        }
+
+        loadShortcuts();
+
+        // --- Start Menu Functionality ---
+        const startButton = document.getElementById('start-button');
+        const startMenu = document.getElementById('start-menu');
+
+        startButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            startMenu.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!startMenu.contains(event.target) && !startButton.contains(event.target)) {
+                startMenu.classList.add('hidden');
+            }
+        });
+
+        // --- App Specific Logic ---
+        document.getElementById('browser-go').addEventListener('click', () => {
+            const urlInput = document.getElementById('browser-url');
+            let url = urlInput.value;
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
+            document.getElementById('browser-frame').src = url;
+        });
+
+        document.getElementById('browser-fullscreen-btn').addEventListener('click', () => {
+            const browserFrame = document.getElementById('browser-frame');
+            if (browserFrame.requestFullscreen) {
+                browserFrame.requestFullscreen();
+            } else if (browserFrame.webkitRequestFullscreen) {
+                browserFrame.webkitRequestFullscreen();
+            } else if (browserFrame.msRequestFullscreen) {
+                browserFrame.msRequestFullscreen();
+            }
+        });
+
+        function renderHtmlInIframe(htmlCode) {
+            const previewContainer = document.getElementById('html-runner-preview');
+            previewContainer.innerHTML = '';
+            const iframe = document.createElement('iframe');
+            const blob = new Blob([htmlCode], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            iframe.src = url;
+            previewContainer.appendChild(iframe);
+
+            if (currentBlobUrl) {
+                URL.revokeObjectURL(currentBlobUrl);
+            }
+            currentBlobUrl = url;
+        }
+
+        document.getElementById('html-runner-run').addEventListener('click', () => {
+            const htmlCode = document.getElementById('html-runner-textarea').value;
+            renderHtmlInIframe(htmlCode);
+        });
+
+        document.getElementById('html-runner-import-btn').addEventListener('click', () => {
+            document.getElementById('html-runner-file-input').click();
+        });
+
+        // FIX: use e.target.files[0]
+        document.getElementById('html-runner-file-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const htmlCode = event.target.result;
+                    document.getElementById('html-runner-textarea').value = htmlCode;
+                    renderHtmlInIframe(htmlCode);
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        document.getElementById('html-runner-fullscreen-btn').addEventListener('click', () => {
+            const previewContainer = document.getElementById('html-runner-preview');
+            if (previewContainer.requestFullscreen) {
+                previewContainer.requestFullscreen();
+            } else if (previewContainer.webkitRequestFullscreen) {
+                previewContainer.webkitRequestFullscreen();
+            } else if (previewContainer.msRequestFullscreen) {
+                previewContainer.msRequestFullscreen();
+            }
+        });
+
+        document.getElementById('music-player-import-btn').addEventListener('click', () => {
+            document.getElementById('music-player-file-input').click();
+        });
+
+        // FIX: use e.target.files[0]
+        document.getElementById('music-player-file-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const fileURL = URL.createObjectURL(file);
+                const audioPlayer = document.getElementById('music-player-audio');
+                const nowPlaying = document.getElementById('now-playing');
+                audioPlayer.src = fileURL;
+                audioPlayer.style.display = 'block';
+                audioPlayer.play();
+                nowPlaying.textContent = `Now playing: ${file.name}`;
+            }
+        });
+
+        document.getElementById('customize-import-btn').addEventListener('click', () => {
+            document.getElementById('customize-file-input').click();
+        });
+
+        // FIX: use e.target.files[0]
+        document.getElementById('customize-file-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const bgUrl = event.target.result;
+                    document.body.style.backgroundImage = `url('${bgUrl}')`;
+                    localStorage.setItem('customBackground', bgUrl);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('customize-reset-btn').addEventListener('click', () => {
+            document.body.style.backgroundImage = `url('https://img.wallpapers.net/wallpapers/windows-11-2023-wallpaper-ai-generated-digital-art-4k-wallpaper-4v6b66e3s3g3l0i0.jpg')`;
+            localStorage.removeItem('customBackground');
+        });
+
+        document.getElementById('notes-save-btn').addEventListener('click', () => {
+            const textContent = document.getElementById('notes-textarea').value;
+            const fileName = `notes_${Date.now()}.txt`;
+            const fileDataUrl = `data:text/plain;base64,${btoa(textContent)}`;
+            createDesktopShortcut(fileName, 'text', 'https://img.icons8.com/color/48/000000/txt.png', null, null, fileDataUrl);
+        });
+    });
+</script>
+</body>
+</html>
