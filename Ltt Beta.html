@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>LTT Linux Desktop — IFrame API (fixed playlist navigation)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root{ --ltt-orange:#FF4D00; --panel:#15161a; --window-bg:#1b1c20; --muted:#9aa0a6; --accent-2:#2b2e33; }
+  html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Helvetica,Arial,sans-serif;background:#081018;color:#ddd;overflow:hidden}
+  body{background-image:linear-gradient(180deg, rgba(8,16,24,0.75), rgba(6,8,12,0.85));background-size:cover;background-position:center}
+  /* topbar/taskbar */
+  #topbar{position:fixed;left:0;right:0;top:0;height:48px;background:linear-gradient(180deg,var(--panel),#0f1114);display:flex;align-items:center;padding:6px 12px;z-index:900;border-bottom:1px solid rgba(255,255,255,0.03)}
+  #topbar .left{display:flex;align-items:center;gap:10px}
+  #menu-button{background:var(--ltt-orange);width:36px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#111;font-weight:800;cursor:pointer}
+  #topbar .center{flex:1;text-align:center;color:var(--muted);font-size:14px}
+  #taskbar{position:fixed;left:0;right:0;bottom:0;height:56px;background:linear-gradient(180deg,#07080a,var(--panel));display:flex;align-items:center;gap:10px;padding:8px 12px;z-index:800;border-top:1px solid rgba(255,255,255,0.03)}
+  /* windows */
+  .window{position:absolute;background:linear-gradient(180deg,var(--window-bg),#131418);border:1px solid rgba(255,255,255,0.04);border-radius:10px;box-shadow:0 18px 60px rgba(0,0,0,0.7);display:none;flex-direction:column;overflow:hidden;color:#e6e6e6;z-index:200}
+  .window-header{padding:10px 12px;background:linear-gradient(180deg,#222428,#111214);display:flex;align-items:center;justify-content:space-between;cursor:grab;border-bottom:1px solid rgba(255,255,255,0.02)}
+  .window-title{font-weight:700;font-size:14px}
+  .window-content{padding:12px;box-sizing:border-box}
+  input[type="text"], textarea{background:var(--accent-2);border:1px solid rgba(255,255,255,0.03);padding:8px;color:#ddd;border-radius:8px;outline:none}
+  button.btn{background:var(--ltt-orange);border:none;color:#0b0b0b;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:800}
+  button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted);padding:8px 10px;border-radius:8px}
+  .desktop-shortcut{position:absolute;width:84px;display:flex;flex-direction:column;align-items:center;color:#fff;text-align:center;cursor:pointer;user-select:none}
+  .desktop-shortcut img{width:48px;height:48px;margin-bottom:6px;filter:drop-shadow(0 8px 18px rgba(0,0,0,0.6))}
+  /* layout */
+  .window-scrollable{max-height:calc(100vh - 160px);display:flex;flex-direction:column}
+  .scroll-inner{overflow:auto;display:flex;gap:12px;padding-right:6px}
+  .player-column{flex:1;display:flex;flex-direction:column;gap:10px;min-width:360px}
+  .player-controls{display:flex;gap:8px;align-items:center}
+  #player-host{flex:1;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.03);background:#000;min-height:300px;display:flex;flex-direction:column}
+  #player{width:100%;height:100%}
+  .playlist-column{width:360px;display:flex;flex-direction:column;gap:8px}
+  .panel{background:var(--accent-2);border-radius:8px;padding:8px;display:flex;flex-direction:column;height:100%}
+  .playlist-list{overflow:auto;border-radius:6px;padding:6px;flex:1}
+  .playlist-item{display:flex;gap:8px;padding:8px;border-radius:6px;align-items:center;cursor:pointer}
+  .playlist-item img{width:110px;height:62px;object-fit:cover;border-radius:4px}
+  @media (max-width:860px){ .scroll-inner{flex-direction:column} .playlist-column{width:100%;height:320px} .player-column{width:100%} }
+</style>
+</head>
+<body>
+  <div id="topbar">
+    <div class="left"><div id="menu-button">LTT</div><div style="font-weight:800">LTT Linux</div></div>
+    <div class="center">WARNING: This version is still in development and may have bugs!</div>
+    <div class="right"></div>
+  </div>
+
+  <div id="desktop"></div>
+
+  <!-- Browser -->
+  <div id="web-browser-window" class="window" style="left:6%;top:72px;width:760px;height:480px">
+    <div class="window-header"><div class="window-title">LTT Browser</div><div><button class="win-btn" onclick="minimizeWindow('web-browser-window')">─</button><button class="win-btn close" onclick="closeWindow('web-browser-window')">×</button></div></div>
+    <div class="window-content" style="display:flex;flex-direction:column;height:100%">
+      <div style="display:flex;gap:8px;margin-bottom:8px"><input id="browser-url" type="text" value="https://linustechtips.com" /><button id="browser-go" class="btn">Go</button><button id="browser-fullscreen-btn" class="ghost">Fullscreen</button></div>
+      <iframe id="browser-frame" src="https://linustechtips.com" style="width:100%;flex:1;border:0;border-radius:8px"></iframe>
+    </div>
+  </div>
+
+  <!-- HTML Runner -->
+  <div id="html-runner-window" class="window" style="left:12%;top:96px;width:680px;height:420px">
+    <div class="window-header"><div class="window-title">HTML Runner</div><div><button class="win-btn" onclick="minimizeWindow('html-runner-window')">─</button><button class="win-btn close" onclick="closeWindow('html-runner-window')">×</button></div></div>
+    <div class="window-content" style="display:flex;flex-direction:column;height:100%">
+      <textarea id="html-runner-textarea" style="height:160px;font-family:monospace">&lt;h1&gt;Hello LTT&lt;/h1&gt;</textarea>
+      <div style="display:flex;gap:8px;margin-top:8px"><button id="html-runner-run" class="btn">Run HTML</button><button id="html-runner-import-btn" class="btn">Import</button><button id="html-runner-fullscreen-btn" class="ghost">Preview Fullscreen</button><input id="html-runner-file-input" type="file" accept=".html" style="display:none" /></div>
+      <div id="html-runner-preview" style="height:160px;border-radius:8px;overflow:hidden;background:#050608;margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- Music -->
+  <div id="music-player-window" class="window" style="left:420px;top:120px;width:420px;height:260px">
+    <div class="window-header"><div class="window-title">Music</div><div><button class="win-btn" onclick="minimizeWindow('music-player-window')">─</button><button class="win-btn close" onclick="closeWindow('music-player-window')">×</button></div></div>
+    <div class="window-content" style="display:flex;flex-direction:column">
+      <div style="display:flex;gap:8px;align-items:center"><button id="music-player-import-btn" class="btn">Open</button><input id="music-player-file-input" type="file" accept="audio/*" style="display:none" /></div>
+      <audio id="music-player-audio" controls style="width:100%;display:none;margin-top:8px"></audio>
+      <div id="now-playing" style="margin-top:8px;color:var(--ltt-orange);font-weight:800"></div>
+    </div>
+  </div>
+
+  <!-- Customize -->
+  <div id="customize-window" class="window" style="left:64px;top:220px;width:480px;height:220px">
+    <div class="window-header"><div class="window-title">Appearance</div><div><button class="win-btn" onclick="minimizeWindow('customize-window')">─</button><button class="win-btn close" onclick="closeWindow('customize-window')">×</button></div></div>
+    <div class="window-content" style="display:flex;flex-direction:column">
+      <div>Change desktop background</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><button id="customize-import-btn" class="btn">Browse</button><input id="customize-file-input" type="file" accept="image/*" style="display:none" /><button id="customize-reset-btn" class="ghost">Restore Default</button></div>
+      <div style="font-size:13px;color:var(--muted);margin-top:8px">Tip: drag an image file to the desktop to create a shortcut</div>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div id="notes-window" class="window" style="left:520px;top:220px;width:520px;height:320px">
+    <div class="window-header"><div class="window-title">Notes</div><div><button class="win-btn" onclick="minimizeWindow('notes-window')">─</button><button class="win-btn close" onclick="closeWindow('notes-window')">×</button></div></div>
+    <div class="window-content" style="display:flex;flex-direction:column;height:100%"><textarea id="notes-textarea" placeholder="Start typing..." style="height:100%;background:#0b0c0e;color:#ddd"></textarea><div style="display:flex;justify-content:space-between;margin-top:8px"><div><button id="notes-import-btn" class="ghost">Import</button><input id="notes-file-input" type="file" accept=".txt" style="display:none" /></div><div><button id="notes-save-btn" class="btn">Save to Desktop</button></div></div></div>
+  </div>
+
+  <!-- Video Player + Playlists (IFrame API controls playback) -->
+  <div id="video-player-window" class="window" style="left:6%; top:72px; width:920px; height:640px">
+    <div class="window-header"><div class="window-title">LTT Playlists</div><div><button class="win-btn" onclick="minimizeWindow('video-player-window')">─</button><button class="win-btn close" onclick="closeWindow('video-player-window')">×</button></div></div>
+    <div class="window-content window-scrollable" style="display:flex;flex-direction:column;height:100%">
+      <div class="scroll-inner" style="flex:1">
+        <div class="player-column" style="flex:1;display:flex;flex-direction:column">
+          <div class="player-controls">
+            <button id="vp-prev" class="btn" style="background:#333;color:#fff">Prev</button>
+            <button id="vp-next" class="btn" style="background:#333;color:#fff">Next</button>
+            <label style="margin-left:8px;color:var(--muted)"><input id="vp-autoplay" type="checkbox" /> Autoplay</label>
+            <div style="margin-left:auto;color:var(--muted)">IFrame API playlist playback (keeps playlist context)</div>
+          </div>
+          <div id="player-host" style="flex:1;margin-top:8px"><div id="player"></div></div>
+        </div>
+
+        <div class="playlist-column">
+          <div class="panel" style="height:100%;display:flex;flex-direction:column">
+            <div style="font-weight:800;color:var(--ltt-orange);margin-bottom:6px">Playlists</div>
+            <div class="playlist-list" id="vp-playlist" role="list" aria-label="Playlist list"></div>
+            <div style="display:flex;gap:8px;margin-top:8px"><input id="vp-add-input" type="text" placeholder="Paste playlist URL or ID" style="flex:1" /><button id="vp-add-btn" class="btn">Add</button></div>
+            <div style="display:flex;gap:8px;margin-top:8px"><button id="vp-add-uploads" class="btn">Add uploads (official)</button><button id="vp-clear" class="ghost">Clear list</button></div>
+            <div style="font-size:12px;color:var(--muted);margin-top:8px">Tip: paste a playlist URL from the channel Playlists page and click Add.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="start-menu" style="position:fixed;left:12px;top:56px;width:300px;display:none;background:linear-gradient(180deg,#0b0c0e,#081018);border-radius:10px;padding:10px;z-index:950;border:1px solid rgba(255,255,255,0.03)">
+    <div style="padding:8px;cursor:pointer" onclick="openWindow('web-browser-window')">Browser</div>
+    <div style="padding:8px;cursor:pointer" onclick="openWindow('html-runner-window')">HTML Runner</div>
+    <div style="padding:8px;cursor:pointer" onclick="openWindow('music-player-window')">Music</div>
+    <div style="padding:8px;cursor:pointer" onclick="openWindow('video-player-window')">Playlists</div>
+    <div style="padding:8px;cursor:pointer" onclick="openWindow('customize-window')">Appearance</div>
+    <div style="padding:8px;cursor:pointer" onclick="openWindow('notes-window')">Notes</div>
+  </div>
+
+  <div id="taskbar"><div id="launcher" class="win-btn" style="background:var(--accent-2);color:var(--ltt-orange);font-weight:800" onclick="toggleStartMenu()">LTT</div></div>
+
+<!-- YouTube IFrame API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+/* Basic window system */
+function bringToFront(el){ let max=200; document.querySelectorAll('.window').forEach(w=>{ const z=parseInt(w.style.zIndex||200); if(z>max) max=z; }); el.style.zIndex = max+1; }
+document.querySelectorAll('.window').forEach(w=>{ const header = w.querySelector('.window-header'); header.addEventListener('mousedown', e=>{ bringToFront(w); w.dataset.drag='1'; w.dataset.offsetX = e.clientX - (w.offsetLeft||0); w.dataset.offsetY = e.clientY - (w.offsetTop||0); w.style.cursor='grabbing'; }); });
+document.addEventListener('mousemove', e=>{ document.querySelectorAll('.window').forEach(w=>{ if(w.dataset.drag==='1'){ w.style.left = (e.clientX - parseFloat(w.dataset.offsetX||0)) + 'px'; w.style.top = (e.clientY - parseFloat(w.dataset.offsetY||0)) + 'px'; } }); });
+document.addEventListener('mouseup', ()=>{ document.querySelectorAll('.window').forEach(w=>{ if(w.dataset.drag){ w.dataset.drag='0'; w.style.cursor='default'; } }); });
+function openWindow(id){ const w=document.getElementById(id); if(w){ w.style.display='flex'; bringToFront(w); } }
+function minimizeWindow(id){ const w=document.getElementById(id); if(w) w.style.display='none'; }
+function closeWindow(id){ const w=document.getElementById(id); if(w) w.style.display='none'; if(id==='video-player-window' && playerInstance){ playerInstance.stopVideo(); } }
+function toggleStartMenu(){ const s=document.getElementById('start-menu'); s.style.display = s.style.display==='block' ? 'none' : 'block'; }
+
+/* Browser, HTML Runner, Music, Customize, Notes wiring */
+document.getElementById('browser-go').addEventListener('click', ()=>{ let url = document.getElementById('browser-url').value.trim(); if(!url) return; if(!url.startsWith('http')) url='https://'+url; document.getElementById('browser-frame').src = url; openWindow('web-browser-window'); });
+document.getElementById('browser-fullscreen-btn').addEventListener('click', ()=>{ const f=document.getElementById('browser-frame'); if(f.requestFullscreen) f.requestFullscreen(); });
+
+let currentBlobUrl = null;
+document.getElementById('html-runner-run').addEventListener('click', ()=>{ const html = document.getElementById('html-runner-textarea').value; const blob = new Blob([html], {type:'text/html'}); const url = URL.createObjectURL(blob); document.getElementById('html-runner-preview').innerHTML = `<iframe src="${url}" style="width:100%;height:100%;border:0"></iframe>`; if(currentBlobUrl) URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = url; openWindow('html-runner-window'); });
+document.getElementById('html-runner-import-btn').addEventListener('click', ()=> document.getElementById('html-runner-file-input').click());
+document.getElementById('html-runner-file-input').addEventListener('change', e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>{ document.getElementById('html-runner-textarea').value = ev.target.result; document.getElementById('html-runner-run').click(); }; r.readAsText(f); });
+document.getElementById('html-runner-fullscreen-btn').addEventListener('click', ()=>{ const iframe=document.getElementById('html-runner-preview').querySelector('iframe'); if(iframe && iframe.requestFullscreen) iframe.requestFullscreen(); });
+
+document.getElementById('music-player-import-btn').addEventListener('click', ()=> document.getElementById('music-player-file-input').click());
+document.getElementById('music-player-file-input').addEventListener('change', e=>{ const f=e.target.files[0]; if(!f) return; const url = URL.createObjectURL(f); const a=document.getElementById('music-player-audio'); a.src = url; a.style.display='block'; a.play(); document.getElementById('now-playing').textContent = `Now playing: ${f.name}`; openWindow('music-player-window'); });
+
+document.getElementById('customize-import-btn').addEventListener('click', ()=> document.getElementById('customize-file-input').click());
+document.getElementById('customize-file-input').addEventListener('change', e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>{ document.body.style.backgroundImage = `url('${ev.target.result}')`; localStorage.setItem('customBackground', ev.target.result); }; r.readAsDataURL(f); openWindow('customize-window'); });
+document.getElementById('customize-reset-btn').addEventListener('click', ()=>{ document.body.style.backgroundImage = ''; localStorage.removeItem('customBackground'); });
+
+document.getElementById('notes-import-btn').addEventListener('click', ()=> document.getElementById('notes-file-input').click());
+document.getElementById('notes-file-input').addEventListener('change', e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>document.getElementById('notes-textarea').value = ev.target.result; r.readAsText(f); openWindow('notes-window'); });
+document.getElementById('notes-save-btn').addEventListener('click', ()=>{ const text=document.getElementById('notes-textarea').value; const fname=`notes_${Date.now()}.txt`; const dataUrl=`data:text/plain;base64,${btoa(text)}`; createDesktopShortcut(fname,'text','https://img.icons8.com/fluency/48/000000/document.png',null,null,dataUrl); });
+
+/* Desktop shortcuts drag/drop & load */
+const desktop = document.getElementById('desktop');
+desktop.addEventListener('dragover', e=>{ e.preventDefault(); e.dataTransfer.dropEffect='copy'; });
+desktop.addEventListener('drop', e=>{ e.preventDefault(); const files = e.dataTransfer.files; if(!files||files.length===0) return; const f=files[0]; const fname=f.name; const ftype=f.type.split('/')[0]; const ext=fname.split('.').pop().toLowerCase(); const r=new FileReader(); r.onload=ev=>{ const data=ev.target.result; if(ftype==='image') createDesktopShortcut(fname,'image',data,e.clientX,e.clientY,data); else if(ftype==='audio') createDesktopShortcut(fname,'audio','https://img.icons8.com/fluency/48/000000/music.png',e.clientX,e.clientY,data); else if(ftype==='text' && ext==='html') createDesktopShortcut(fname,'html','https://img.icons8.com/color/48/000000/html-5.png',e.clientX,e.clientY,data); else if(ftype==='text') createDesktopShortcut(fname,'text','https://img.icons8.com/fluency/48/000000/document.png',e.clientX,e.clientY,data); else alert('Unsupported file type.'); }; if(ftype==='image'||ftype==='audio'||ftype==='text') r.readAsDataURL(f); });
+
+let shortcutCounter = 0;
+function createDesktopShortcut(fileName,type,iconUrl,x=null,y=null,fileData=null){
+  const s=document.createElement('div'); s.className='desktop-shortcut';
+  if(x===null||y===null){ x = 20 + (shortcutCounter * 96); y = 20; shortcutCounter++; }
+  s.style.left = x + 'px'; s.style.top = y + 'px';
+  s.setAttribute('data-file-type', type); s.setAttribute('data-file-name', fileName); s.ondblclick = openShortcut;
+  const img=document.createElement('img'); img.src = iconUrl; img.alt = fileName; s.appendChild(img);
+  const lbl=document.createElement('div'); lbl.textContent = fileName.length>12 ? fileName.substring(0,12)+'...' : fileName; s.appendChild(lbl);
+  desktop.appendChild(s);
+  localStorage.setItem(`shortcut:${fileName}`, JSON.stringify({ fileName, type, icon: iconUrl, x, y }));
+  if(fileData) localStorage.setItem(`file:${fileName}`, fileData);
+}
+function loadShortcuts(){ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && k.startsWith('shortcut:')){ try{ const s=JSON.parse(localStorage.getItem(k)); const fk=`file:${s.fileName}`; if(localStorage.getItem(fk) || s.type==='image') createDesktopShortcut(s.fileName, s.type||'text', s.icon||'https://img.icons8.com/fluency/48/000000/document.png', s.x, s.y); else localStorage.removeItem(k); }catch(e){} } } }
+loadShortcuts();
+function openShortcut(e){ const el=e.currentTarget; const type=el.getAttribute('data-file-type'); const name=el.getAttribute('data-file-name'); const data=localStorage.getItem(`file:${name}`); const map={'html':'html-runner-window','audio':'music-player-window','text':'notes-window'}; openWindow(map[type]||'notes-window'); if(data){ if(type==='html'){ const html=atob(data.split(',')[1]); const blob=new Blob([html], {type:'text/html'}); const url=URL.createObjectURL(blob); document.getElementById('html-runner-preview').innerHTML = `<iframe src="${url}" style="width:100%;height:100%;border:0"></iframe>`; } if(type==='audio'){ const a=document.getElementById('music-player-audio'); a.src = data; a.style.display='block'; a.play(); document.getElementById('now-playing').textContent = `Now playing: ${name}`; } if(type==='text'){ document.getElementById('notes-textarea').value = atob(data.split(',')[1]); } if(type==='image'){ alert('Image available; use Appearance to set background.'); } } else alert('File data missing.'); }
+
+/* --- YouTube IFrame API player (controls playlist, prev/next use player methods) --- */
+let playerInstance = null;
+let pendingLoad = null; // {playlistId, autoplay}
+let playlists = []; // {id,name}
+let currentIndex = -1;
+
+function playlistIdFromInput(input){
+  input=(input||'').trim();
+  if(!input) return null;
+  if(/^PL|^UU|^LL|^RD|^OL/.test(input)) return input;
+  try{ const u=new URL(input); const list=u.searchParams.get('list'); if(list) return list; const seg=u.pathname.split('/').filter(Boolean).pop(); if(/^PL|^UU|^LL|^RD|^OL/.test(seg)) return seg; return null; }catch{return null;}
+}
+
+function buildPlaylistUI(){
+  const container = document.getElementById('vp-playlist'); container.innerHTML='';
+  playlists.forEach((pl, idx)=>{
+    const row=document.createElement('div'); row.className='playlist-item';
+    const thumb=document.createElement('img'); thumb.src=`https://i.ytimg.com/vi/${(pl.sampleVideoId||'dQw4w9WgXcQ')}/hqdefault.jpg`; thumb.alt='thumb';
+    const meta=document.createElement('div'); meta.className='meta'; meta.style.flex='1';
+    const title=document.createElement('div'); title.textContent = pl.name || pl.id; title.style.fontWeight='700';
+    const info=document.createElement('div'); info.textContent = `ID: ${pl.id}`; info.style.color='var(--muted)'; info.style.fontSize='12px';
+    meta.appendChild(title); meta.appendChild(info);
+    const btn=document.createElement('button'); btn.className='btn'; btn.textContent='Play';
+    btn.addEventListener('click', (e)=>{ e.stopPropagation(); selectAndPlay(idx, true); });
+    row.appendChild(thumb); row.appendChild(meta); row.appendChild(btn);
+    row.addEventListener('click', ()=> selectAndPlay(idx, false));
+    container.appendChild(row);
+  });
+}
+
+function onYouTubeIframeAPIReady(){
+  playerInstance = new YT.Player('player', {
+    height:'100%', width:'100%',
+    playerVars: { rel:0, modestbranding:1 },
+    events: { onReady: onPlayerReady, onStateChange: onPlayerStateChange, onError: onPlayerError }
+  });
+}
+function onPlayerReady(){
+  if(pendingLoad){ loadPlaylistToPlayer(pendingLoad.playlistId, pendingLoad.autoplay); pendingLoad=null; }
+}
+function onPlayerStateChange(e){}
+function onPlayerError(e){ console.warn('YT error', e); }
+
+function loadPlaylistToPlayer(playlistId, autoplay){
+  if(!playerInstance){ pendingLoad = {playlistId, autoplay: !!autoplay}; return; }
+  // Use loadPlaylist to load the playlist into the player's own playlist state.
+  playerInstance.loadPlaylist({ list: playlistId, listType: 'playlist', index: 0, suggestedQuality: 'large' });
+  if(autoplay) playerInstance.playVideo(); else playerInstance.pauseVideo();
+  openWindow('video-player-window');
+}
+
+// select playlist and optionally autoplay (Play button -> autoplay true)
+function selectAndPlay(idx, autoplay){
+  if(idx < 0 || idx >= playlists.length) return;
+  currentIndex = idx; buildPlaylistUI();
+  loadPlaylistToPlayer(playlists[idx].id, !!autoplay);
+}
+
+// prev/next use player methods to keep playlist context
+document.getElementById('vp-next').addEventListener('click', ()=> { if(playerInstance) playerInstance.nextVideo(); });
+document.getElementById('vp-prev').addEventListener('click', ()=> { if(playerInstance) playerInstance.previousVideo(); });
+
+// Add / uploads / clear controls
+document.getElementById('vp-add-btn').addEventListener('click', ()=> {
+  const raw = document.getElementById('vp-add-input').value.trim();
+  const id = playlistIdFromInput(raw);
+  if(!id){ alert('Paste a playlist URL or playlist ID (starts with PL, UU, etc.)'); return; }
+  const name = prompt('Optional friendly name (leave blank to use ID):','') || id;
+  playlists.push({ id, name });
+  document.getElementById('vp-add-input').value='';
+  buildPlaylistUI();
+  selectAndPlay(playlists.length-1, true);
+});
+document.getElementById('vp-add-uploads').addEventListener('click', ()=> {
+  const uploadsId = 'UUXuqSBlHAE6Xw-yeJA0Tunw';
+  if(playlists.some(p=>p.id===uploadsId)){ alert('Uploads already added'); return; }
+  playlists.push({ id: uploadsId, name: 'Channel uploads (official)' });
+  buildPlaylistUI();
+  selectAndPlay(playlists.length-1, true);
+});
+document.getElementById('vp-clear').addEventListener('click', ()=> {
+  if(!confirm('Clear all playlists?')) return;
+  playlists = []; currentIndex = -1; buildPlaylistUI();
+  if(playerInstance){ playerInstance.stopVideo(); }
+});
+document.getElementById('vp-add-input').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('vp-add-btn').click(); });
+
+/* Seed with your requested playlist for quick testing */
+playlists = [{ id: 'PL8mG-RkN2uTyvvHG_b2BvkR0XDdbDso3u', name:'Requested playlist (PL8mG...)' }];
+buildPlaylistUI();
+
+/* Expose player container for API */
+(function createPlayerContainer(){
+  // ensure a div#player exists where API will insert iframe
+  const host = document.getElementById('player');
+  host.style.width = '100%'; host.style.height = '100%';
+})();
+
+/* Restore background */
+const savedBackground = localStorage.getItem('customBackground');
+if(savedBackground) document.body.style.backgroundImage = `url('${savedBackground}')`;
+</script>
+</body>
+</html>
